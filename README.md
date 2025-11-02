@@ -1,6 +1,13 @@
-# IDA CS2 Reversing Tools
+IDA Pro CS2 Reversing Tools
+---
 
 A collection of IDA Pro plugins designed to automate and streamline the reverse engineering of Counter-Strike 2 and Source 2 engine binaries.
+
+Since the CS2 (or other Source2 games) are updated on regular basis, it's not making life easier for a reverse-engineer that is actively reversing the game. In order to make the reversing of new CS2 binaries easier, this plugin introduces several tools that may help along the way.
+
+The plugin includes tools such as **automatic interface renaming**, which automatically detects global interface variables used in the codebase and renames them accordingly. For instance, `g_pVApplication001` or `g_pVEngineCvar007`. Another tool is the **convar renamer**, which does a similar thing where it automatically detects convars/concommands across the IDB and renames them.
+
+Happy Reversing!
 
 > [!NOTE]
 > This repository uses the [ida_domain](https://github.com/HexRaysSA/ida-domain) IDA Pro SDK.
