@@ -91,6 +91,7 @@ class CS2ToolsMenu(QtWidgets.QDialog):
         super().__init__(parent)
         self.actions = actions
         self.selected_action: Optional[ToolAction] = None
+        self.run_all_selected = False
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -148,10 +149,15 @@ class CS2ToolsMenu(QtWidgets.QDialog):
         self.run_button.clicked.connect(self.on_run_clicked)
         self.run_button.setEnabled(False)
 
+        self.run_all_button = QtWidgets.QPushButton("Execute All")
+        self.run_all_button.clicked.connect(self.on_run_all_clicked)
+        self.run_all_button.setEnabled(self.tool_list.count() > 0)
+
         cancel_button = QtWidgets.QPushButton("Cancel")
         cancel_button.clicked.connect(self.reject)
 
         btn_layout.addStretch()
+        btn_layout.addWidget(self.run_all_button)
         btn_layout.addWidget(self.run_button)
         btn_layout.addWidget(cancel_button)
         layout.addLayout(btn_layout)
@@ -187,7 +193,15 @@ class CS2ToolsMenu(QtWidgets.QDialog):
         """Handle Run button click."""
         current = self.tool_list.currentItem()
         if current:
+            self.run_all_selected = False
             self.selected_action = current.data(QtCore.Qt.UserRole)
+            self.accept()
+
+    def on_run_all_clicked(self) -> None:
+        """Handle Execute All button click."""
+        if self.tool_list.count() > 0:
+            self.run_all_selected = True
+            self.selected_action = None
             self.accept()
 
 
@@ -201,6 +215,7 @@ class CS2ReversingTools(idaapi.plugin_t):
     wanted_hotkey = "Ctrl+Shift+2"
 
     def __init__(self):
+        print("[CS2Tools] Constructor called")
         super().__init__()
         self.actions: List[ToolAction] = []
 
@@ -252,14 +267,28 @@ class CS2ReversingTools(idaapi.plugin_t):
             app = QtWidgets.QApplication([])
 
         dialog = CS2ToolsMenu(self.actions)
-        if dialog.exec_() == QtWidgets.QDialog.Accepted and dialog.selected_action:
-            try:
-                dialog.selected_action.execute(db)
-            except Exception as e:
-                print(f"[CS2Tools] Error executing {dialog.selected_action.name}: {e}")
-                import traceback
+        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+            if dialog.run_all_selected:
+                print("[CS2Tools] Executing all tools...")
+                for action in self.actions:
+                    try:
+                        print(f"[CS2Tools] Running: {action.name}")
+                        action.execute(db)
+                    except Exception as e:
+                        print(f"[CS2Tools] Error executing {action.name}: {e}")
+                        import traceback
 
-                traceback.print_exc()
+                        traceback.print_exc()
+            elif dialog.selected_action:
+                try:
+                    dialog.selected_action.execute(db)
+                except Exception as e:
+                    print(
+                        f"[CS2Tools] Error executing {dialog.selected_action.name}: {e}"
+                    )
+                    import traceback
+
+                    traceback.print_exc()
 
     def term(self) -> None:
         """Cleanup when plugin is unloaded."""
