@@ -22,7 +22,7 @@ from PyQt5 import QtCore, QtWidgets
 
 
 # Import tool modules
-from cs2_tools import interface_renamer, convar_renamer
+from cs2_tools import interface_renamer, convar_renamer, pseudocode_dumper
 
 
 class ToolAction:
@@ -80,6 +80,26 @@ class ConVarRenamerAction(ToolAction):
     def execute(self, db: ida_domain.Database) -> None:
         """Execute ConVar/ConCommand renaming."""
         convar_renamer.run_convar_renamer(db)
+
+
+class MarkedPseudocodeDumperAction(ToolAction):
+    """Action for dumping pseudocode of functions marked as decompiled."""
+
+    def __init__(self):
+        super().__init__(
+            name="Dump Marked Pseudocode",
+            description="""\
+<p>Dump pseudocode for functions marked with the decompiler's <code>Mark/unmark as decompiled</code> command.</p>
+
+<p>This tool only exports marked functions and writes the result to a file you choose.</p>
+""",
+            version="1.0.0",
+            hotkey="Ctrl+Shift+P",
+        )
+
+    def execute(self, db: ida_domain.Database) -> None:
+        """Execute marked pseudocode dump."""
+        pseudocode_dumper.run_marked_pseudocode_dumper(db)
 
 
 class CS2ToolsMenu(QtWidgets.QDialog):
@@ -227,6 +247,7 @@ class CS2ReversingTools(idaapi.plugin_t):
         self.actions = [
             InterfaceRenamerAction(),
             ConVarRenamerAction(),
+            MarkedPseudocodeDumperAction(),
             # Add more tools here as you develop them:
             # SchemaSystemAction(),
             # NetworkVarAnalyzerAction(),

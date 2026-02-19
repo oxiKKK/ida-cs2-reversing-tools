@@ -16,6 +16,7 @@ Happy Reversing!
 
 - **Interface Table Renamer**: Automatically locates and renames Source 2 interface pointers (e.g., `ICvar`, `IEngineClient`) based on their interface identifiers
 - **ConVar/ConCommand Renamer**: Renames global ConVar and ConCommand variables based on their registration string names
+- **Dump Marked Pseudocode**: Exports pseudocode for functions marked via Hex-Rays **Mark/unmark as decompiled** into a single output file
 - **Execute All Tools**: Runs every available tool in sequence from a single menu action
 
 ## Requirements
