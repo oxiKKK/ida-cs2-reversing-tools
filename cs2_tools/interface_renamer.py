@@ -15,7 +15,8 @@ This script locates the table and renames entries to g_pVApplication001,
 g_pVEngineCvar007, etc.
 """
 
-from typing import List, Optional, Tuple
+from typing import List, Optional, Set, Tuple
+import re
 
 import ida_domain
 from ida_domain.names import SetNameFlags
@@ -26,6 +27,18 @@ from PyQt5 import QtWidgets
 def msg(s: str) -> None:
     """Print a message with the tool prefix."""
     print(f"[InterfaceRenamer] {s}")
+
+
+INTERFACE_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]{1,127}\d{3,4}$")
+
+
+def is_probable_interface_name(name: str) -> bool:
+    """Return True if a string looks like a Source 2 interface identifier."""
+    if not name:
+        return False
+    if not name.isascii():
+        return False
+    return INTERFACE_NAME_RE.match(name) is not None
 
 
 def collect_renames(
@@ -42,6 +55,7 @@ def collect_renames(
         List of tuples (address, new_name) for renaming
     """
     renames: List[Tuple[ea_t, str]] = []
+    seen_ptrs: Set[ea_t] = set()
     for i in range(max_entries):
         entry = start_addr + i * 0x10
         name_ptr = db.bytes.get_qword_at(entry)
@@ -73,6 +87,21 @@ def collect_renames(
                 f"(If this is the last entry, ignore it)"
             )
             break
+
+        if not is_probable_interface_name(name):
+            msg(
+                f"Stopping at 0x{entry:X}: '{name}' does not look like an interface name"
+            )
+            break
+
+        if ptr in seen_ptrs:
+            msg(
+                f"Stopping at 0x{entry:X}: duplicate interface pointer 0x{ptr:X} "
+                f"(likely end of table)"
+            )
+            break
+
+        seen_ptrs.add(ptr)
         var_name = f"g_p{name}"
         renames.append((ptr, var_name))
     return renames
@@ -108,10 +137,7 @@ def find_interface_table(db: ida_domain.Database, string_name: str) -> Optional[
             if name_ptr is None or name_ptr == 0:
                 return False
             name = read_c_string(name_ptr)
-            if not name:
-                return False
-            # Most entries start with 'V' (e.g., VApplication001, VEngineCvar007, ...)
-            if not name[0].isprintable():
+            if not name or not is_probable_interface_name(name):
                 return False
             ptr = db.bytes.get_qword_at(ea + 0x8)
             if ptr is None or ptr == 0 or not db.is_valid_ea(ptr):
@@ -124,16 +150,12 @@ def find_interface_table(db: ida_domain.Database, string_name: str) -> Optional[
         """Stricter check used for initial anchor validation."""
         if not is_valid_entry(ea):
             return False
-        # Also check that the next entry looks valid and begins with a printable string
+        # Also check that the next entry looks valid and has a plausible interface name
         next_name_ptr = db.bytes.get_qword_at(ea + 0x10)
         if next_name_ptr is None:
             return False
         next_str = read_c_string(next_name_ptr)
-        if not next_str:
-            return False
-        # Heuristic: next entry should also look like a typical interface name.
-        # Often starts with 'V', but don't require strictly; just ensure printable.
-        if not next_str[0].isprintable():
+        if not next_str or not is_probable_interface_name(next_str):
             return False
         return True
 
